@@ -4,7 +4,7 @@ import multiparty from 'multiparty';
 import fs from 'fs';
 import { BlobReader, ZipReader, Data64URIWriter } from '@zip.js/zip.js';
 
-const PASSWORD = 'X'; // Replace with your password or pass it from the request
+const PASSWORD = '1720618040028'; // Replace with your password or pass it from the request
 
 export default async function handler(req, res) {
   if (req.method === 'POST') {
