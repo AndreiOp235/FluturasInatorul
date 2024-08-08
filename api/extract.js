@@ -3,6 +3,7 @@
 import multiparty from 'multiparty';
 import fs from 'fs';
 import yauzl from 'yauzl';
+import { Readable } from 'stream';
 
 const PASSWORD = 'X'; // Replace 'X' with your actual password
 
@@ -23,22 +24,36 @@ export default async function handler(req, res) {
       }
 
       try {
-        // Open the ZIP file using yauzl
         yauzl.open(file.path, { lazyEntries: true, password: PASSWORD }, (err, zipFile) => {
           if (err) {
             console.error('Error opening ZIP file:', err.message);
             return res.status(500).json({ error: 'Failed to open ZIP file', details: err.message });
           }
 
-          // Read the first entry in the ZIP file
           zipFile.readEntry();
+
           zipFile.on('entry', (entry) => {
-            // If the entry is a file, respond with the file name
             if (/\/$/.test(entry.fileName)) {
               zipFile.readEntry(); // Skip directories
             } else {
-              res.json({ fileName: entry.fileName });
-              zipFile.close();
+              zipFile.openReadStream(entry, (err, readStream) => {
+                if (err) {
+                  console.error('Error opening read stream for entry:', err.message);
+                  return res.status(500).json({ error: 'Failed to open read stream for entry', details: err.message });
+                }
+
+                // Set response headers for file download
+                res.setHeader('Content-Disposition', `attachment; filename=${entry.fileName}`);
+                res.setHeader('Content-Type', 'application/octet-stream');
+
+                // Pipe the read stream to the response
+                readStream.pipe(res);
+
+                // Close the ZIP file after streaming the entry
+                readStream.on('end', () => {
+                  zipFile.close();
+                });
+              });
             }
           });
 
