@@ -2,18 +2,15 @@
 
 import multiparty from 'multiparty';
 import fs from 'fs';
+import { BlobReader, ZipReader, Entry } from '@zip.js/zip.js';
 
-function bufferToHex(buffer) {
-  return Array.from(buffer)
-    .map(byte => byte.toString(16).padStart(2, '0'))
-    .join('');
-}
+const PASSWORD = 'your_password_here'; // Replace with your password or accept from a request field
 
 export default async function handler(req, res) {
   if (req.method === 'POST') {
     const form = new multiparty.Form();
 
-    form.parse(req, (err, fields, files) => {
+    form.parse(req, async (err, fields, files) => {
       if (err) {
         console.error('Error parsing form data:', err);
         return res.status(500).json({ error: 'Failed to parse form data' });
@@ -26,20 +23,34 @@ export default async function handler(req, res) {
       }
 
       try {
-        // Read the file content as a buffer
+        // Read the uploaded ZIP file into a buffer
         const fileBuffer = fs.readFileSync(file.path);
+        const blob = new Blob([fileBuffer]);
 
-        // Convert the buffer to a hexdump
-        const hexDump = bufferToHex(fileBuffer);
+        // Create a ZipReader instance to read the zip file
+        const zipReader = new ZipReader(new BlobReader(blob), { password: PASSWORD });
 
-        // Respond with the hexdump in JSON
+        // Get entries from the zip file
+        const entries = await zipReader.getEntries();
+
+        if (entries.length === 0) {
+          return res.status(400).json({ error: 'No files found in the ZIP archive' });
+        }
+
+        // Get the name of the first file in the ZIP
+        const firstEntry = entries[0];
+        const fileName = firstEntry.filename;
+
+        // Respond with the file name
         res.json({
-          fileName: file.originalFilename,
-          hexDump: hexDump
+          fileName: fileName,
         });
+
+        // Close the zip reader
+        await zipReader.close();
       } catch (error) {
-        console.error('Error processing file:', error.message);
-        res.status(500).json({ error: 'Failed to process file', details: error.message });
+        console.error('Error processing ZIP file:', error.message);
+        res.status(500).json({ error: 'Failed to process ZIP file', details: error.message });
       }
     });
   } else {
