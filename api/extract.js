@@ -1,6 +1,8 @@
+// api/extract.js
+
 import multiparty from 'multiparty';
 import fs from 'fs';
-import JSZip from 'jszip';
+import { Minizip } from 'minizip-asm';
 
 const PASSWORD = 'X'; // Replace 'X' with your actual password
 
@@ -27,11 +29,25 @@ export default async function handler(req, res) {
         }
 
         try {
-          const zip = await JSZip.loadAsync(data, { password: PASSWORD });
-          const firstFile = Object.keys(zip.files)[0];
-          const fileContent = await zip.files[firstFile].async('nodebuffer');
+          // Initialize minizip
+          const minizip = new Minizip();
+          await minizip.load();
 
-          res.setHeader('Content-Disposition', `attachment; filename=${firstFile}`);
+          // Open the ZIP file
+          const zip = minizip.open(new Uint8Array(data), PASSWORD);
+
+          // Find the first file entry
+          const entries = zip.getEntries();
+          if (entries.length === 0) {
+            return res.status(404).json({ error: 'No files found in the ZIP archive' });
+          }
+
+          const firstEntry = entries[0];
+          const fileName = firstEntry.getName();
+          const fileContent = await firstEntry.async('nodebuffer');
+
+          // Set response headers for file download
+          res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
           res.setHeader('Content-Type', 'application/octet-stream');
           res.send(fileContent);
         } catch (error) {
