@@ -1,6 +1,10 @@
 // api/extract.js
 
 import AdmZip from 'adm-zip';
+import { writeFile } from 'fs/promises';
+import { join } from 'path';
+
+const TEMP_FILE_PATH = join('/tmp', 'uploaded.zip');
 
 export default async function handler(req, res) {
   if (req.method === 'POST') {
@@ -11,8 +15,11 @@ export default async function handler(req, res) {
       // Log raw data size for debugging
       console.log(`Raw data size: ${data.length}`);
 
-      // Initialize AdmZip with the raw data
-      const zip = new AdmZip(data);
+      // Write the raw data to a temporary file for debugging
+      await writeFile(TEMP_FILE_PATH, data);
+
+      // Initialize AdmZip with the file
+      const zip = new AdmZip(TEMP_FILE_PATH);
 
       // Get all entries in the ZIP file
       const zipEntries = zip.getEntries();
@@ -20,7 +27,7 @@ export default async function handler(req, res) {
       // Log number of entries for debugging
       console.log(`Number of entries: ${zipEntries.length}`);
 
-      // If there are no files, return an error
+      // If there are no files, return an error 
       if (zipEntries.length === 0) {
         return res.status(400).json({ error: 'No files in the ZIP archive' });
       }
