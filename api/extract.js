@@ -3,7 +3,7 @@
 import multiparty from 'multiparty';
 import fs from 'fs';
 import yauzl from 'yauzl';
-import { promisify } from 'util';
+import { type } from 'os';
 
 const PASSWORD = 'X'; // Replace 'X' with your actual password
 
@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     const form = new multiparty.Form();
 
-    form.parse(req, async (err, fields, files) => {
+    form.parse(req, (err, fields, files) => {
       if (err) {
         console.error('Error parsing form data:', err);
         return res.status(500).json({ error: 'Failed to parse form data' });
@@ -24,37 +24,27 @@ export default async function handler(req, res) {
       }
 
       try {
+        // Open the ZIP file using yauzl
         yauzl.open(file.path, { lazyEntries: true, password: PASSWORD }, (err, zipFile) => {
           if (err) {
             console.error('Error opening ZIP file:', err.message);
             return res.status(500).json({ error: 'Failed to open ZIP file', details: err.message });
           }
 
+          // Read the first entry in the ZIP file
           zipFile.readEntry();
           zipFile.on('entry', (entry) => {
+            // If the entry is a file, respond with the file name
             if (/\/$/.test(entry.fileName)) {
               zipFile.readEntry(); // Skip directories
             } else {
-              zipFile.openReadStream(entry, (err, readStream) => {
-                if (err) {
-                  console.error('Error reading entry stream:', err.message);
-                  return res.status(500).json({ error: 'Failed to read entry stream', details: err.message });
-                }
-
-                const chunks = [];
-                readStream.on('data', chunk => chunks.push(chunk));
-                readStream.on('end', () => {
-                  const fileData = Buffer.concat(chunks);
-                  const encodedFileData = fileData.toString('base64');
-
-                  res.json({
-                    fileName: entry.fileName,
-                    hardcoed: "gigelium",
-                    incaCeva: "boohohoho",
-                    tip: encodedFileData
-                  });
-                });
+                let ceva = entry;
+              res.json({ fileName: entry.fileName ,
+                hardcoed: "gigelium",
+                incaCeva: "boohohoho",
+                tip: ceva.toString('base64')
               });
+              zipFile.close();
             }
           });
 
@@ -64,7 +54,7 @@ export default async function handler(req, res) {
 
           zipFile.on('error', (err) => {
             console.error('Error processing ZIP file:', err.message);
-            res.status(500).json({ error: 'Failed to process ZIP file', details: err.message });
+            return res.status(500).json({ error: 'Failed to process ZIP file', details: err.message });
           });
         });
       } catch (error) {
