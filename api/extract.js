@@ -1,35 +1,55 @@
 // api/extract.js
 
+import multiparty from 'multiparty';
+import AdmZip from 'adm-zip';
+
 export default async function handler(req, res) {
   if (req.method === 'POST') {
-    try {
-      // Get the raw body data from the request
-      const data = await getRawBody(req);
+    const form = new multiparty.Form();
 
-      // Log raw data size for debugging
-      console.log(`Raw data size: ${data.length}`);
+    form.parse(req, (err, fields, files) => {
+      if (err) {
+        console.error('Error parsing form data:', err);
+        return res.status(500).json({ error: 'Failed to parse form data' });
+      }
 
-      // Generate a hexdump of the first 64 bytes for debugging
-      const hexdump = data.toString('hex').match(/.{1,32}/g).join('\n');
+      // Get the uploaded file
+      const file = files.file?.[0];
 
-      // Return the hexdump in the response
-      res.status(200).json({ hexdump });
-    } catch (error) {
-      // Log the error message for debugging
-      console.error('Error processing file:', error.message);
-      res.status(500).json({ error: 'Failed to process file', details: error.message });
-    }
+      if (!file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      try {
+        // Read the file data as a buffer
+        const fileBuffer = file ? file.buffer : null;
+
+        if (!fileBuffer) {
+          return res.status(400).json({ error: 'Failed to read uploaded file' });
+        }
+
+        // Initialize AdmZip with the file buffer
+        const zip = new AdmZip(fileBuffer);
+
+        // Get all entries in the ZIP file
+        const zipEntries = zip.getEntries();
+
+        // If there are no files, return an error
+        if (zipEntries.length === 0) {
+          return res.status(400).json({ error: 'No files in the ZIP archive' });
+        }
+
+        // Get the name of the first file
+        const firstFileName = zipEntries[0].entryName;
+
+        // Return the file name
+        res.json({ fileName: firstFileName });
+      } catch (error) {
+        console.error('Error processing ZIP file:', error.message);
+        res.status(500).json({ error: 'Failed to process ZIP file', details: error.message });
+      }
+    });
   } else {
     res.status(405).json({ error: 'Method not allowed' });
   }
-}
-
-// Helper function to get raw body data from request
-function getRawBody(req) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    req.on('data', chunk => chunks.push(chunk));
-    req.on('end', () => resolve(Buffer.concat(chunks)));
-    req.on('error', reject);
-  });
 }
