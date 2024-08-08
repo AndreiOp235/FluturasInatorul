@@ -22,39 +22,49 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'No file uploaded or failed to read file path' });
       }
 
-      try {
-        // Open the ZIP file using yauzl
-        yauzl.open(file.path, { lazyEntries: true, password: PASSWORD, decrypt: true }, (err, zipFile) => {
-          if (err) {
-            console.error('Error opening ZIP file:', err.message);
-            return res.status(500).json({ error: 'Failed to open ZIP file', details: err.message });
-          }
+      // Log the file details for debugging
+      console.log(`Received file: ${file.originalFilename}`);
+      fs.stat(file.path, (err, stats) => {
+        if (err) {
+          console.error('Error reading file stats:', err);
+          return res.status(500).json({ error: 'Failed to read file stats' });
+        }
+        console.log(`File size: ${stats.size} bytes`);
 
-          // Read the first entry in the ZIP file
-          zipFile.readEntry();
-          zipFile.on('entry', (entry) => {
-            // If the entry is a file, respond with the file name
-            if (/\/$/.test(entry.fileName)) {
-              zipFile.readEntry(); // Skip directories
-            } else {
-              res.json({ fileName: entry.fileName });
-              zipFile.close();
+        try {
+          // Open the ZIP file using yauzl
+          yauzl.open(file.path, { lazyEntries: true, password: PASSWORD, decrypt: true }, (err, zipFile) => {
+            if (err) {
+              console.error('Error opening ZIP file:', err.message);
+              return res.status(500).json({ error: 'Failed to open ZIP file', details: err.message });
             }
-          });
 
-          zipFile.on('end', () => {
-            zipFile.close();
-          });
+            // Read the first entry in the ZIP file
+            zipFile.readEntry();
+            zipFile.on('entry', (entry) => {
+              // If the entry is a file, respond with the file name
+              if (/\/$/.test(entry.fileName)) {
+                zipFile.readEntry(); // Skip directories
+              } else {
+                res.json({ fileName: entry.fileName });
+                zipFile.close();
+              }
+            });
 
-          zipFile.on('error', (err) => {
-            console.error('Error processing ZIP file:', err.message);
-            return res.status(500).json({ error: 'Failed to process ZIP file', details: err.message });
+            zipFile.on('end', () => {
+              zipFile.close();
+            });
+
+            zipFile.on('error', (err) => {
+              console.error('Error processing ZIP file:', err.message);
+              return res.status(500).json({ error: 'Failed to process ZIP file', details: err.message });
+            });
           });
-        });
-      } catch (error) {
-        console.error('Error processing file:', error.message);
-        res.status(500).json({ error: 'Failed to process file', details: error.message });
-      }
+        } catch (error) {
+          console.error('Error processing file:', error.message);
+          res.status(500).json({ error: 'Failed to process file', details: error.message });
+        }
+      });
     });
   } else {
     res.status(405).json({ error: 'Method not allowed' });
