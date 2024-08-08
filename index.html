@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FluturasInatorul</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f8f9fa;
+      padding-top: 50px;
+    }
+    .container {
+      max-width: 600px;
+    }
+    .card {
+      padding: 20px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1 class="card-title text-center">FluturasInatorul</h1>
+      <form id="uploadForm" enctype="multipart/form-data">
+        <div class="form-group">
+          <label for="fileInput">Choose a ZIP file to upload</label>
+          <input type="file" class="form-control-file" id="fileInput" name="file" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Upload</button>
+      </form>
+      <div class="mt-4">
+        <h3 class="text-center">Response</h3>
+        <pre id="response" class="bg-light p-3 border rounded"></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS and dependencies -->
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+  <script>
+    document.getElementById('uploadForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const fileInput = document.getElementById('fileInput');
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+
+      try {
+        const response = await fetch('/api/extract', {
+          method: 'POST',
+          body: formData,
+        });
+        const result = await response.json();
+        document.getElementById('response').textContent = JSON.stringify(result, null, 2);
+      } catch (error) {
+        document.getElementById('response').textContent = `Error: ${error.message}`;
+      }
+    });
+  </script>
+</body>
+</html>
