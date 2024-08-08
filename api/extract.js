@@ -4,6 +4,8 @@ import multiparty from 'multiparty';
 import fs from 'fs';
 import AdmZip from 'adm-zip';
 
+const PASSWORD = 'X'; // Replace 'X' with your actual password
+
 export default async function handler(req, res) {
   if (req.method === 'POST') {
     const form = new multiparty.Form();
@@ -27,6 +29,9 @@ export default async function handler(req, res) {
 
         // Initialize AdmZip with the file buffer
         const zip = new AdmZip(fileBuffer);
+
+        // Set the password for the encrypted ZIP file
+        zip.setPassword(PASSWORD);
 
         // Get all entries in the ZIP file
         const zipEntries = zip.getEntries();
