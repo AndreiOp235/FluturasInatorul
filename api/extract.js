@@ -2,7 +2,7 @@
 
 import multiparty from 'multiparty';
 import fs from 'fs';
-import yauzl from 'yauzl';
+import StreamZip from 'node-stream-zip';
 
 const PASSWORD = 'X'; // Replace 'X' with your actual password
 
@@ -23,49 +23,35 @@ export default async function handler(req, res) {
       }
 
       try {
-        // Open the ZIP file using yauzl
-        yauzl.open(file.path, { lazyEntries: true, password: PASSWORD }, (err, zipFile) => {
-          if (err) {
-            console.error('Error opening ZIP file:', err.message);
-            return res.status(500).json({ error: 'Failed to open ZIP file', details: err.message });
-          }
+        // Initialize node-stream-zip with the uploaded file and password
+        const zip = new StreamZip.async({ file: file.path, password: PASSWORD });
 
-          zipFile.readEntry();
-          zipFile.on('entry', (entry) => {
-            if (/\/$/.test(entry.fileName)) {
-              // Skip directories
-              zipFile.readEntry();
-            } else {
-              // Extract the file from the ZIP archive
-              zipFile.openReadStream(entry, (err, readStream) => {
-                if (err) {
-                  console.error('Error reading ZIP entry:', err.message);
-                  return res.status(500).json({ error: 'Failed to read ZIP entry', details: err.message });
-                }
-
-                // Set the appropriate headers for downloading the file
-                res.setHeader('Content-Disposition', `attachment; filename="${entry.fileName}"`);
-                res.setHeader('Content-Type', 'application/octet-stream');
-
-                // Pipe the file content to the response
-                readStream.pipe(res);
-
-                readStream.on('end', () => {
-                  zipFile.close();
-                });
-              });
-            }
-          });
-
-          zipFile.on('end', () => {
-            zipFile.close();
-          });
-
-          zipFile.on('error', (err) => {
-            console.error('Error processing ZIP file:', err.message);
-            return res.status(500).json({ error: 'Failed to process ZIP file', details: err.message });
-          });
+        zip.on('error', (err) => {
+          console.error('Error opening ZIP file:', err.message);
+          return res.status(500).json({ error: 'Failed to open ZIP file', details: err.message });
         });
+
+        // Get the entries (files) in the ZIP archive
+        const entries = await zip.entries();
+
+        // Find the first file entry
+        const firstEntry = Object.values(entries).find(entry => !entry.isDirectory);
+
+        if (!firstEntry) {
+          return res.status(400).json({ error: 'No files found in the ZIP archive' });
+        }
+
+        // Stream the file content to the response
+        res.setHeader('Content-Disposition', `attachment; filename="${firstEntry.name}"`);
+        res.setHeader('Content-Type', 'application/octet-stream');
+
+        const stream = await zip.stream(firstEntry.name);
+        stream.pipe(res);
+
+        stream.on('end', async () => {
+          await zip.close();
+        });
+
       } catch (error) {
         console.error('Error processing file:', error.message);
         res.status(500).json({ error: 'Failed to process file', details: error.message });
