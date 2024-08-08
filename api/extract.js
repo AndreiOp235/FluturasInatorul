@@ -46,8 +46,7 @@ export default async function handler(req, res) {
               if (/\/$/.test(entry.fileName)) {
                 zipFile.readEntry(); // Skip directories
               } else {
-                res.json({ fileName: entry.fileName ,
-                    ceva: "hard-coded"
+                res.json({ fileName: entry.fileName 
                 });
                 zipFile.close();
               }
