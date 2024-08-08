@@ -41,7 +41,7 @@ export default async function handler(req, res) {
                 let ceva = entry;
               res.json({ fileName: entry.fileName ,
                 hardcoed: "gigelium",
-                tip: typeof(entry)
+                tip: Object.prototype.toString.call(ceva)
               });
               zipFile.close();
             }
