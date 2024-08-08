@@ -2,7 +2,7 @@
 
 import multiparty from 'multiparty';
 import fs from 'fs';
-import { Readable } from 'stream';
+import yauzl from 'yauzl';
 import sharp from 'sharp';
 import { PDFDocument } from 'pdf-lib';
 
@@ -25,25 +25,22 @@ export default async function handler(req, res) {
       }
 
       try {
-        // Open the PDF file using pdf-lib
-        const fileBuffer = fs.readFileSync(file.path);
-        const pdfDoc = await PDFDocument.load(fileBuffer);
-        
-        // Convert the first page to PNG
-        const firstPage = pdfDoc.getPages()[0];
-        const pdfPageBuffer = await firstPage.render({
-          scale: 2, // Adjust the scale as needed
-        });
+        // Extract files from ZIP
+        const extractedFiles = await extractFilesFromZip(file.path);
 
-        const pngBuffer = await sharp(pdfPageBuffer).toBuffer();
+        // Process each extracted file
+        for (const extractedFile of extractedFiles) {
+          if (extractedFile.fileName.endsWith('.pdf')) {
+            // Convert PDF to PNG
+            const base64Image = await convertPdfToPng(extractedFile.fileBuffer);
+            return res.json({
+              fileName: extractedFile.fileName,
+              imageBase64: base64Image
+            });
+          }
+        }
 
-        // Convert PNG buffer to base64
-        const base64Image = pngBuffer.toString('base64');
-
-        res.json({
-          fileName: file.originalFilename,
-          imageBase64: base64Image
-        });
+        res.status(400).json({ error: 'No PDF files found in the ZIP archive' });
 
       } catch (error) {
         console.error('Error processing file:', error.message);
@@ -53,4 +50,66 @@ export default async function handler(req, res) {
   } else {
     res.status(405).json({ error: 'Method not allowed' });
   }
+}
+
+// Function to extract files from a ZIP archive
+async function extractFilesFromZip(zipPath) {
+  return new Promise((resolve, reject) => {
+    yauzl.open(zipPath, { lazyEntries: true, password: PASSWORD }, (err, zipFile) => {
+      if (err) {
+        return reject(err);
+      }
+
+      const extractedFiles = [];
+      zipFile.readEntry();
+
+      zipFile.on('entry', (entry) => {
+        if (/\/$/.test(entry.fileName)) {
+          zipFile.readEntry(); // Skip directories
+        } else {
+          zipFile.openReadStream(entry, (err, stream) => {
+            if (err) {
+              return reject(err);
+            }
+
+            const buffers = [];
+            stream.on('data', (chunk) => buffers.push(chunk));
+            stream.on('end', () => {
+              const fileBuffer = Buffer.concat(buffers);
+              extractedFiles.push({
+                fileName: entry.fileName,
+                fileBuffer
+              });
+              zipFile.readEntry();
+            });
+          });
+        }
+      });
+
+      zipFile.on('end', () => {
+        resolve(extractedFiles);
+      });
+
+      zipFile.on('error', (err) => {
+        reject(err);
+      });
+    });
+  });
+}
+
+// Function to convert PDF to PNG
+async function convertPdfToPng(pdfBuffer) {
+  const pdfDoc = await PDFDocument.load(pdfBuffer);
+
+  if (pdfDoc.getPageCount() < 1) {
+    throw new Error('PDF document is empty');
+  }
+
+  const firstPage = pdfDoc.getPages()[0];
+  const pdfPageBuffer = await firstPage.render({
+    scale: 2, // Adjust the scale as needed
+  });
+
+  const pngBuffer = await sharp(pdfPageBuffer).toBuffer();
+  return pngBuffer.toString('base64');
 }
