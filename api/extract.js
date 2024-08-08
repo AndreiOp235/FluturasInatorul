@@ -4,6 +4,7 @@ import multiparty from 'multiparty';
 import fs from 'fs';
 import yauzl from 'yauzl';
 import { type } from 'os';
+import { serialize } from 'v8';
 
 const PASSWORD = 'X'; // Replace 'X' with your actual password
 
@@ -42,7 +43,7 @@ export default async function handler(req, res) {
               res.json({ fileName: entry.fileName ,
                 hardcoed: "gigelium",
                 incaCeva: "boohohoho",
-                tip: ceva.toString('base64')
+                tip: serialize(ceva)
               });
               zipFile.close();
             }
