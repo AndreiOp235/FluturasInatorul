@@ -38,34 +38,27 @@ export default async function handler(req, res) {
             return res.status(500).json({ error: 'Failed to open ZIP file', details: err.message });
           }
 
-          // Prepare to collect metadata
-          const fileEntries = [];
-
+          let entryProcessed = false;
           zipFile.on('entry', (entry) => {
             if (/\/$/.test(entry.fileName)) {
               zipFile.readEntry(); // Skip directories
-            } else {
+            } else if (!entryProcessed) {
+              entryProcessed = true;
+              
+              // Extract metadata from the single file entry
               const metadata = {
-                fileName: entry.fileName,
-                compressionMethod: entry.compressionMethod,
-                compressedSize: entry.compressedSize,
-                uncompressedSize: entry.uncompressedSize,
-                crc32: entry.crc32,
-                lastModFileDate: entry.lastModFileDate,
-                lastModFileTime: entry.lastModFileTime,
-                isEncrypted: entry.isEncrypted,
-                extraFields: entry.extraFields,
-                fileComment: entry.fileComment
+                fileName: entry.fileName
               };
 
-              fileEntries.push(metadata);
-              zipFile.readEntry(); // Continue to next entry
+              res.json(metadata);
+              zipFile.close(); // Close the ZIP file after processing
             }
           });
 
           zipFile.on('end', () => {
-            res.json(fileEntries);
-            zipFile.close();
+            if (!entryProcessed) {
+              res.status(404).json({ error: 'No file found in ZIP archive' });
+            }
           });
 
           zipFile.on('error', (err) => {
