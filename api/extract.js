@@ -2,7 +2,7 @@
 
 import multiparty from 'multiparty';
 import fs from 'fs';
-import AdmZip from 'adm-zip';
+import yauzl from 'yauzl';
 
 const PASSWORD = 'X'; // Replace 'X' with your actual password
 
@@ -16,7 +16,6 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Failed to parse form data' });
       }
 
-      // Get the uploaded file
       const file = files.file?.[0];
 
       if (!file || !file.path) {
@@ -24,31 +23,37 @@ export default async function handler(req, res) {
       }
 
       try {
-        // Read the file data from the filesystem
-        const fileBuffer = fs.readFileSync(file.path);
+        // Open the ZIP file using yauzl
+        yauzl.open(file.path, { lazyEntries: true, password: PASSWORD }, (err, zipFile) => {
+          if (err) {
+            console.error('Error opening ZIP file:', err.message);
+            return res.status(500).json({ error: 'Failed to open ZIP file', details: err.message });
+          }
 
-        // Initialize AdmZip with the file buffer
-        const zip = new AdmZip(fileBuffer);
+          // Read the first entry in the ZIP file
+          zipFile.readEntry();
+          zipFile.on('entry', (entry) => {
+            // If the entry is a file, respond with the file name
+            if (/\/$/.test(entry.fileName)) {
+              zipFile.readEntry(); // Skip directories
+            } else {
+              res.json({ fileName: entry.fileName });
+              zipFile.close();
+            }
+          });
 
-        // Set the password for the encrypted ZIP file
-        zip.setPassword(PASSWORD);
+          zipFile.on('end', () => {
+            zipFile.close();
+          });
 
-        // Get all entries in the ZIP file
-        const zipEntries = zip.getEntries();
-
-        // If there are no files, return an error
-        if (zipEntries.length === 0) {
-          return res.status(400).json({ error: 'No files in the ZIP archive' });
-        }
-
-        // Get the name of the first file
-        const firstFileName = zipEntries[0].entryName;
-
-        // Return the file name
-        res.json({ fileName: firstFileName });
+          zipFile.on('error', (err) => {
+            console.error('Error processing ZIP file:', err.message);
+            return res.status(500).json({ error: 'Failed to process ZIP file', details: err.message });
+          });
+        });
       } catch (error) {
-        console.error('Error processing ZIP file:', error.message);
-        res.status(500).json({ error: 'Failed to process ZIP file', details: error.message });
+        console.error('Error processing file:', error.message);
+        res.status(500).json({ error: 'Failed to process file', details: error.message });
       }
     });
   } else {

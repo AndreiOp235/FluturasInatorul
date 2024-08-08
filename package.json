@@ -3,6 +3,8 @@
     "version": "1.0.0",
     "dependencies": {
         "adm-zip": "^0.5.9",
-        "multiparty": "^4.2.3"
+        "fd-slicer": "^1.1.0",
+        "multiparty": "^4.2.3",
+        "yauzl": "^3.1.3"
     }
 }
