@@ -3,7 +3,6 @@
 import multiparty from 'multiparty';
 import fs from 'fs';
 import yauzl from 'yauzl';
-import { Readable } from 'stream';
 
 const PASSWORD = 'X'; // Replace 'X' with your actual password
 
@@ -24,7 +23,7 @@ export default async function handler(req, res) {
       }
 
       try {
-        yauzl.open(file.path, { lazyEntries: true, password: PASSWORD }, (err, zipFile) => {
+        yauzl.open(file.path, { lazyEntries: true, password: PASSWORD, decrypt: true }, (err, zipFile) => {
           if (err) {
             console.error('Error opening ZIP file:', err.message);
             return res.status(500).json({ error: 'Failed to open ZIP file', details: err.message });
