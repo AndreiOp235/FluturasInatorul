@@ -3,6 +3,7 @@
 import multiparty from 'multiparty';
 import fs from 'fs';
 import yauzl from 'yauzl';
+import { type } from 'os';
 
 const PASSWORD = 'X'; // Replace 'X' with your actual password
 
@@ -37,8 +38,10 @@ export default async function handler(req, res) {
             if (/\/$/.test(entry.fileName)) {
               zipFile.readEntry(); // Skip directories
             } else {
+                let ceva = entry;
               res.json({ fileName: entry.fileName ,
-                hardcoed: "gigelium"
+                hardcoed: "gigelium",
+                tip: typeof(entry)
               });
               zipFile.close();
             }
