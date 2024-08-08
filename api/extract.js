@@ -41,6 +41,7 @@ export default async function handler(req, res) {
                 let ceva = entry;
               res.json({ fileName: entry.fileName ,
                 hardcoed: "gigelium",
+                incaCeva: "boohohoho",
                 tip: ceva.toString('base64')
               });
               zipFile.close();
