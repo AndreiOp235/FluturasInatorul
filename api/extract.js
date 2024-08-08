@@ -28,6 +28,10 @@ export default async function handler(req, res) {
         // Extract files from ZIP
         const extractedFiles = await extractFilesFromZip(file.path);
 
+        if (extractedFiles.length === 0) {
+          return res.status(400).json({ error: 'No files extracted from ZIP' });
+        }
+
         // Process each extracted file
         for (const extractedFile of extractedFiles) {
           if (extractedFile.fileName.endsWith('.pdf')) {
@@ -99,17 +103,22 @@ async function extractFilesFromZip(zipPath) {
 
 // Function to convert PDF to PNG
 async function convertPdfToPng(pdfBuffer) {
-  const pdfDoc = await PDFDocument.load(pdfBuffer);
+  try {
+    const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-  if (pdfDoc.getPageCount() < 1) {
-    throw new Error('PDF document is empty');
+    if (pdfDoc.getPageCount() < 1) {
+      throw new Error('PDF document is empty');
+    }
+
+    const firstPage = pdfDoc.getPages()[0];
+    const pdfPageBuffer = await firstPage.render({
+      scale: 2, // Adjust the scale as needed
+    });
+
+    const pngBuffer = await sharp(pdfPageBuffer).toBuffer();
+    return pngBuffer.toString('base64');
+  } catch (error) {
+    console.error('Error converting PDF to PNG:', error.message);
+    throw new Error('Failed to convert PDF to PNG');
   }
-
-  const firstPage = pdfDoc.getPages()[0];
-  const pdfPageBuffer = await firstPage.render({
-    scale: 2, // Adjust the scale as needed
-  });
-
-  const pngBuffer = await sharp(pdfPageBuffer).toBuffer();
-  return pngBuffer.toString('base64');
 }
