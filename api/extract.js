@@ -7,8 +7,6 @@ import { promisify } from 'util';
 
 const PASSWORD = 'X'; // Replace 'X' with your actual password
 
-const readFileAsync = promisify(fs.readFile);
-
 export default async function handler(req, res) {
   if (req.method === 'POST') {
     const form = new multiparty.Form();
@@ -33,34 +31,29 @@ export default async function handler(req, res) {
           }
 
           zipFile.readEntry();
-          zipFile.on('entry', async (entry) => {
+          zipFile.on('entry', (entry) => {
             if (/\/$/.test(entry.fileName)) {
               zipFile.readEntry(); // Skip directories
             } else {
-              zipFile.openReadStream(entry, async (err, readStream) => {
+              zipFile.openReadStream(entry, (err, readStream) => {
                 if (err) {
                   console.error('Error reading entry stream:', err.message);
                   return res.status(500).json({ error: 'Failed to read entry stream', details: err.message });
                 }
 
-                try {
-                  const chunks = [];
-                  readStream.on('data', chunk => chunks.push(chunk));
-                  readStream.on('end', async () => {
-                    const fileData = Buffer.concat(chunks);
-                    const encodedFileData = fileData.toString('base64');
+                const chunks = [];
+                readStream.on('data', chunk => chunks.push(chunk));
+                readStream.on('end', () => {
+                  const fileData = Buffer.concat(chunks);
+                  const encodedFileData = fileData.toString('base64');
 
-                    res.json({
-                      fileName: entry.fileName,
-                      hardcoed: "gigelium",
-                      incaCeva: "boohohoho",
-                      tip: encodedFileData
-                    });
+                  res.json({
+                    fileName: entry.fileName,
+                    hardcoed: "gigelium",
+                    incaCeva: "boohohoho",
+                    tip: encodedFileData
                   });
-                } catch (error) {
-                  console.error('Error processing file data:', error.message);
-                  res.status(500).json({ error: 'Failed to process file data', details: error.message });
-                }
+                });
               });
             }
           });
