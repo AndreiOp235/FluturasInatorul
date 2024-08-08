@@ -3,7 +3,6 @@
 import multiparty from 'multiparty';
 import fs from 'fs';
 import yauzl from 'yauzl';
-import { promisify } from 'util';
 
 const PASSWORD = 'X'; // Replace 'X' with your actual password
 
@@ -34,32 +33,12 @@ export default async function handler(req, res) {
           // Read the first entry in the ZIP file
           zipFile.readEntry();
           zipFile.on('entry', (entry) => {
-            // If the entry is a file, extract its content
+            // If the entry is a file, respond with the file name
             if (/\/$/.test(entry.fileName)) {
               zipFile.readEntry(); // Skip directories
             } else {
-              zipFile.openReadStream(entry, (err, readStream) => {
-                if (err) {
-                  console.error('Error reading entry stream:', err.message);
-                  return res.status(500).json({ error: 'Failed to read file stream', details: err.message });
-                }
-
-                const chunks = [];
-                readStream.on('data', (chunk) => {
-                  chunks.push(chunk);
-                });
-
-                readStream.on('end', () => {
-                  const fileContent = Buffer.concat(chunks).toString('utf-8');
-                  res.json({ fileName: entry.fileName, content: fileContent });
-                  zipFile.close();
-                });
-
-                readStream.on('error', (err) => {
-                  console.error('Error processing file stream:', err.message);
-                  return res.status(500).json({ error: 'Failed to process file stream', details: err.message });
-                });
-              });
+              res.json({ fileName: entry.fileName });
+              zipFile.close();
             }
           });
 
