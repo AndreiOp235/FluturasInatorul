@@ -2,7 +2,7 @@
 
 import multiparty from 'multiparty';
 import fs from 'fs';
-import { BlobReader, ZipReader, TextWriter } from '@zip.js/zip.js';
+import { BlobReader, ZipReader, Data64URIWriter } from '@zip.js/zip.js';
 
 const PASSWORD = 'X'; // Replace with your password or pass it from the request
 
@@ -39,13 +39,13 @@ export default async function handler(req, res) {
 
         // Extract the first file
         const firstEntry = entries[0];
-        const fileContent = await firstEntry.getData(new TextWriter());
+        const fileContent = await firstEntry.getData(new Data64URIWriter());
 
-        // Respond with the file name and content
-        res.json({
-          fileName: firstEntry.filename,
-          content: fileContent,
-        });
+        // Remove the URI scheme prefix (data:image/png;base64,)
+        const base64Data = fileContent.split(',')[1] || fileContent;
+
+        // Respond with just the base64-encoded content
+        res.json(base64Data);
 
         // Close the zip reader
         await zipReader.close();
