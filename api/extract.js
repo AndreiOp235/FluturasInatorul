@@ -2,7 +2,7 @@
 
 import multiparty from 'multiparty';
 import fs from 'fs';
-import StreamZip from 'node-stream-zip';
+import yauzl from 'yauzl';
 
 const PASSWORD = 'X'; // Replace 'X' with your actual password
 
@@ -23,35 +23,34 @@ export default async function handler(req, res) {
       }
 
       try {
-        // Initialize node-stream-zip with the uploaded file and password
-        const zip = new StreamZip.async({ file: file.path, password: PASSWORD });
+        // Open the ZIP file using yauzl
+        yauzl.open(file.path, { lazyEntries: true, password: PASSWORD }, (err, zipFile) => {
+          if (err) {
+            console.error('Error opening ZIP file:', err.message);
+            return res.status(500).json({ error: 'Failed to open ZIP file', details: err.message });
+          }
 
-        zip.on('error', (err) => {
-          console.error('Error opening ZIP file:', err.message);
-          return res.status(500).json({ error: 'Failed to open ZIP file', details: err.message });
+          // Read the first entry in the ZIP file
+          zipFile.readEntry();
+          zipFile.on('entry', (entry) => {
+            // If the entry is a file, respond with the file name
+            if (/\/$/.test(entry.fileName)) {
+              zipFile.readEntry(); // Skip directories
+            } else {
+              res.json({ fileName: entry.fileName });
+              zipFile.close();
+            }
+          });
+
+          zipFile.on('end', () => {
+            zipFile.close();
+          });
+
+          zipFile.on('error', (err) => {
+            console.error('Error processing ZIP file:', err.message);
+            return res.status(500).json({ error: 'Failed to process ZIP file', details: err.message });
+          });
         });
-
-        // Get the entries (files) in the ZIP archive
-        const entries = await zip.entries();
-
-        // Find the first file entry
-        const firstEntry = Object.values(entries).find(entry => !entry.isDirectory);
-
-        if (!firstEntry) {
-          return res.status(400).json({ error: 'No files found in the ZIP archive' });
-        }
-
-        // Stream the file content to the response
-        res.setHeader('Content-Disposition', `attachment; filename="${firstEntry.name}"`);
-        res.setHeader('Content-Type', 'application/octet-stream');
-
-        const stream = await zip.stream(firstEntry.name);
-        stream.pipe(res);
-
-        stream.on('end', async () => {
-          await zip.close();
-        });
-
       } catch (error) {
         console.error('Error processing file:', error.message);
         res.status(500).json({ error: 'Failed to process file', details: error.message });
