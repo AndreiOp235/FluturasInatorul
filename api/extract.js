@@ -1,7 +1,7 @@
 // api/extract.js
 
 import multiparty from 'multiparty';
-import AdmZip from 'adm-zip';
+import fs from 'fs';
 
 export default async function handler(req, res) {
   if (req.method === 'POST') {
@@ -16,17 +16,13 @@ export default async function handler(req, res) {
       // Get the uploaded file
       const file = files.file?.[0];
 
-      if (!file) {
-        return res.status(400).json({ error: 'No file uploaded' });
+      if (!file || !file.path) {
+        return res.status(400).json({ error: 'No file uploaded or failed to read file path' });
       }
 
       try {
-        // Read the file data as a buffer
-        const fileBuffer = file ? file.buffer : null;
-
-        if (!fileBuffer) {
-          return res.status(400).json({ error: 'Failed to read uploaded file' });
-        }
+        // Read the file data from the filesystem
+        const fileBuffer = fs.readFileSync(file.path);
 
         // Initialize AdmZip with the file buffer
         const zip = new AdmZip(fileBuffer);
