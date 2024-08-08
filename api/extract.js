@@ -30,15 +30,30 @@ export default async function handler(req, res) {
             return res.status(500).json({ error: 'Failed to open ZIP file', details: err.message });
           }
 
-          // Read the first entry in the ZIP file
           zipFile.readEntry();
           zipFile.on('entry', (entry) => {
-            // If the entry is a file, respond with the file name
             if (/\/$/.test(entry.fileName)) {
-              zipFile.readEntry(); // Skip directories
+              // Skip directories
+              zipFile.readEntry();
             } else {
-              res.json({ fileName: entry.fileName });
-              zipFile.close();
+              // Extract the file from the ZIP archive
+              zipFile.openReadStream(entry, (err, readStream) => {
+                if (err) {
+                  console.error('Error reading ZIP entry:', err.message);
+                  return res.status(500).json({ error: 'Failed to read ZIP entry', details: err.message });
+                }
+
+                // Set the appropriate headers for downloading the file
+                res.setHeader('Content-Disposition', `attachment; filename="${entry.fileName}"`);
+                res.setHeader('Content-Type', 'application/octet-stream');
+
+                // Pipe the file content to the response
+                readStream.pipe(res);
+
+                readStream.on('end', () => {
+                  zipFile.close();
+                });
+              });
             }
           });
 
