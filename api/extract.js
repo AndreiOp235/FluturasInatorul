@@ -23,7 +23,7 @@ export default async function handler(req, res) {
       }
 
       try {
-        yauzl.open(file.path, { lazyEntries: true, password: PASSWORD, decrypt: true }, (err, zipFile) => {
+        yauzl.open(file.path, { lazyEntries: true, password: PASSWORD, decrypt: false }, (err, zipFile) => {
           if (err) {
             console.error('Error opening ZIP file:', err.message);
             return res.status(500).json({ error: 'Failed to open ZIP file', details: err.message });
