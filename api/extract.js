@@ -1,6 +1,9 @@
+// api/extract.js
+
 import multiparty from 'multiparty';
 import fs from 'fs';
 import yauzl from 'yauzl';
+import { type } from 'os';
 import { serialize } from 'v8';
 
 const PASSWORD = 'X'; // Replace 'X' with your actual password
@@ -22,44 +25,27 @@ export default async function handler(req, res) {
       }
 
       try {
-        yauzl.open(file.path, { lazyEntries: true, password: PASSWORD, decrypt : false }, (err, zipFile) => {
+        // Open the ZIP file using yauzl
+        yauzl.open(file.path, { lazyEntries: true, password: PASSWORD }, (err, zipFile) => {
           if (err) {
             console.error('Error opening ZIP file:', err.message);
             return res.status(500).json({ error: 'Failed to open ZIP file', details: err.message });
           }
 
+          // Read the first entry in the ZIP file
           zipFile.readEntry();
           zipFile.on('entry', (entry) => {
+            // If the entry is a file, respond with the file name
             if (/\/$/.test(entry.fileName)) {
               zipFile.readEntry(); // Skip directories
             } else {
-              // Reading the file content from the ZIP entry
-              zipFile.openReadStream(entry, (err, readStream) => {
-                if (err) {
-                  console.error('Error opening read stream:', err.message);
-                  return res.status(500).json({ error: 'Failed to open read stream', details: err.message });
-                }
-
-                let fileData = '';
-                readStream.on('data', (chunk) => {
-                  fileData += chunk.toString(); // Collecting the file data
-                });
-
-                readStream.on('end', () => {
-                  res.json({
-                    fileName: entry.fileName,
-                    hardcoed: "gigelium",
-                    incaCeva: "boohohoho",
-                    fileData // This is the content of the file
-                  });
-                  zipFile.close();
-                });
-
-                readStream.on('error', (err) => {
-                  console.error('Error reading stream:', err.message);
-                  res.status(500).json({ error: 'Failed to read file stream', details: err.message });
-                });
+                let ceva = entry;
+              res.json({ fileName: entry.fileName ,
+                hardcoed: "gigelium",
+                incaCeva: "boohohoho",
+                tip: serialize(ceva)
               });
+              zipFile.close();
             }
           });
 
