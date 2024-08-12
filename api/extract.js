@@ -5,7 +5,7 @@ import fs from 'fs';
 import { BlobReader, ZipReader, Data64URIWriter } from '@zip.js/zip.js';
 
 
-const DEFAULT_PASSWORD = 'X'; // Default password for backward compatibility
+const DEFAULT_PASSWORD = ''; // Default password for backward compatibility
 
 
 export default async function handler(req, res) {
