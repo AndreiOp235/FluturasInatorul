@@ -12,6 +12,7 @@
 # Utilizare
 1. Accesand https://fluturas-inatorul.vercel.app/ si incarcand o arhiva ZIP. Daca nu se mentioneaza o parola se va folosi constanta din PASSWORD Outputul va primul PDF din arhiva encoded base64
 2. Trimitand un request de tip POST catre https://fluturas-inatorul.vercel.app/extract avand ca payload form-data sub forma
-   file: # fisier #
+   file: **fisier**
+   
 Raspunsul primit va fi un JSON sub forma
   {" fisier PDF encoded as base64 "}
