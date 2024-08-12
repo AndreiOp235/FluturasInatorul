@@ -29,6 +29,10 @@
           <label for="fileInput">Choose a ZIP file to upload</label>
           <input type="file" class="form-control-file" id="fileInput" name="file" />
         </div>
+        <div class="form-group">
+          <label for="passwordInput">Password (optional)</label>
+          <input type="password" class="form-control" id="passwordInput" name="password" placeholder="Enter password if required">
+        </div>
         <button type="submit" class="btn btn-primary btn-block">Upload</button>
       </form>
       <div class="mt-4">
@@ -46,9 +50,18 @@
   <script>
     document.getElementById('uploadForm').addEventListener('submit', async (event) => {
       event.preventDefault();
+      
       const fileInput = document.getElementById('fileInput');
+      const passwordInput = document.getElementById('passwordInput');
       const formData = new FormData();
+      
       formData.append('file', fileInput.files[0]);
+      
+      // Add password to the form data if provided
+      const password = passwordInput.value;
+      if (password) {
+        formData.append('password', password);
+      }
 
       try {
         const response = await fetch('/api/extract', {
