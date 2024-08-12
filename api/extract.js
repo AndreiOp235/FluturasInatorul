@@ -3,22 +3,8 @@
 import multiparty from 'multiparty';
 import fs from 'fs';
 import { BlobReader, ZipReader, Data64URIWriter } from '@zip.js/zip.js';
-import pdfToPng from 'pdf-to-png-converter';
 
 const DEFAULT_PASSWORD = 'X'; // Default password for backward compatibility
-
-async function convertPdfToPng(base64Pdf) {
-  // Convert base64 PDF to a buffer
-  const pdfBuffer = Buffer.from(base64Pdf, 'base64');
-
-  // Use pdf-to-png-converter to convert the buffer to a PNG buffer
-  const pngBuffer = await pdfToPng.convertBufferToBuffer(pdfBuffer);
-
-  // Convert PNG buffer to base64
-  const base64Png = pngBuffer.toString('base64');
-
-  return base64Png;
-}
 
 export default async function handler(req, res) {
   if (req.method === 'POST') { 
@@ -60,9 +46,8 @@ export default async function handler(req, res) {
         const base64Data = fileContent.split(',')[1] || fileContent;
 
         // Call function to convert PDF to PNG
-        const basePNG = await convertPdfToPng(base64Data);
 
-        res.json(basePNG);
+        res.json(base64Data);
 
         // Close the zip reader
         await zipReader.close();
