@@ -14,4 +14,4 @@
 2. Trimitand un request de tip POST catre https://fluturas-inatorul.vercel.app/extract avand ca payload form-data sub forma
    file: <fisier> 
 Raspunsul primit va fi un JSON sub forma
-  {"<fisier PDF encoded as base64>"}
+  {" <fisier PDF encoded as base64> "}
